@@ -222,5 +222,5 @@ def end(key):
 
 
 if __name__ == "__main__":
-    app.admin_key = 'password'
+    app.admin_key = os.environ.get('ADMIN_KEY', 'password')
     app.run(debug=True, port=5001)
