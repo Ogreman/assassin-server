@@ -112,6 +112,8 @@ class Contribution(db.Model):
 
     def pay(self):
         if not self.paid:
+            self.user.score = self.user.score - self.amount
+            db.session.add(self.user)
             self.paid = True
             print "Contribution {id} paid successfully".format(id=self.id)
             return True
