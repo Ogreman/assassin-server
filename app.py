@@ -20,6 +20,9 @@ app = FlaskAPI(__name__, template_folder=TEMPLATE_DIR)
 app.config.update(
     SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URL', 'sqlite:///dev.db'),
 )
+app.admin_key = os.environ.get('ADMIN_KEY', 'password')
+app.game_active = False
+
 db = SQLAlchemy(app)
 
 
@@ -251,13 +254,11 @@ def start(key):
 
 @app.route("/api/status/")
 def game_status():
-    if app.game_active:
-        return { 'status': app.game_active }, status.HTTP_200_OK
+    if current_app.game_active:
+        return { 'status': current_app.game_active }, status.HTTP_200_OK
     else:
-        return { 'status': app.game_active }, status.HTTP_503_SERVICE_UNAVAILABLE
+        return { 'status': current_app.game_active }, status.HTTP_503_SERVICE_UNAVAILABLE
 
 
 if __name__ == "__main__":
-    app.admin_key = os.environ.get('ADMIN_KEY', 'password')
-    app.game_active = False
     app.run(debug=True, port=5001)
