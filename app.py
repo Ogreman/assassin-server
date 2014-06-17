@@ -251,10 +251,10 @@ def start(key):
 
 @app.route("/api/status/")
 def game_status():
-    if current_app.game_active:
-        return { 'status': current_app.game_active }, status.HTTP_200_OK
+    if app.game_active:
+        return { 'status': app.game_active }, status.HTTP_200_OK
     else:
-        return { 'status': current_app.game_active }, status.HTTP_200_OK
+        return { 'status': app.game_active }, status.HTTP_503_SERVICE_UNAVAILABLE
 
 
 if __name__ == "__main__":
