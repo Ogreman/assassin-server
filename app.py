@@ -1,7 +1,8 @@
 import os
 from datetime import datetime
+from functools import wraps
 
-from flask import request, url_for, render_template
+from flask import request, url_for, render_template, current_app, redirect
 
 from flask.ext.api import FlaskAPI, status, exceptions
 from flask.ext.api.decorators import set_renderers
@@ -23,6 +24,17 @@ db = SQLAlchemy(app)
 
 
 AMOUNT = 5
+
+
+def game_active_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if current_app.game_active:
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('game_status'))
+        return func(*args, **kwargs)
+    return decorated_view
 
 
 class User(db.Model):
@@ -125,6 +137,7 @@ class Contribution(db.Model):
 
 
 @app.route("/api/contributions/", methods=['GET', 'POST'])
+@game_active_required
 def contributions():
     """
     List or create contributions.
@@ -144,6 +157,7 @@ def contributions():
 
 
 @app.route("/api/contributions/<id>/")
+@game_active_required
 def contribution(id):
     try:
         return Contribution.query.filter_by(id=id).first().to_json(), status.HTTP_200_OK
@@ -174,6 +188,7 @@ def users():
 
 
 @app.route("/api/targets/<id>/")
+@game_active_required
 def targets(id):
     return User.get_others(id), status.HTTP_200_OK
 
@@ -187,6 +202,7 @@ def user(id):
 
 
 @app.route("/api/hit/", methods=['POST'])
+@game_active_required
 def hit():
 
     user = User.query.get(request.data.get('id'))
@@ -214,13 +230,32 @@ def hit():
 
 @app.route("/api/end/<key>")
 def end(key):
-    if key == app.admin_key:
+    if key == current_app.admin_key:
         Contribution.pay_contributions()
-        return { 'paid': True }, status.HTTP_200_OK
+        current_app.game_active = False
+        return { 'paid': True, 'status': False }, status.HTTP_200_OK
     else:
-        return { 'paid': False }, status.HTTP_400_BAD_REQUEST
+        return { 'paid': False, 'status': current_app.game_active }, status.HTTP_400_BAD_REQUEST
+
+
+@app.route("/api/start/<key>")
+def start(key):
+    if key == current_app.admin_key:
+        current_app.game_active = True
+        return { 'status': True }, status.HTTP_200_OK
+    else:
+        return { 'status': current_app.game_active }, status.HTTP_400_BAD_REQUEST
+
+
+@app.route("/api/status/")
+def game_status():
+    if current_app.game_active:
+        return { 'status': current_app.game_active }, status.HTTP_200_OK
+    else:
+        return { 'status': current_app.game_active }, status.HTTP_503_SERVICE_UNAVAILABLE
 
 
 if __name__ == "__main__":
     app.admin_key = os.environ.get('ADMIN_KEY', 'password')
+    app.game_active = False
     app.run(debug=True, port=5001)
